@@ -1,246 +1,441 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Management;
-using System.Runtime.InteropServices;
-using System.Text;
+using System.IO;
 using System.Threading;
-using WindowsInput;
-using WindowsInput.Native;
+using System.Windows.Forms;
 using NAudio.CoreAudioApi;
-using System.Runtime.InteropServices;
+using System.Globalization;
+using System.Management;
+using System.Diagnostics.PerformanceData;
+using System.Security.Policy;
 
-
-class Program
+public class MainForm : Form
 {
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    private static extern bool SetForegroundWindow(IntPtr hWnd);
-    [DllImport("user32.dll")]
-    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-    static void Main()
+    private Button btnRunAllTests, btnCheckAVSettings, btnCheckFile, btnCheckWindowsUpdate, btnCheckTeams, btnCheckZoom, btnCheckVisualizer, btnOpenZoom, btnInstallZoom, btnInstallTeams, btnInstallVisualizer, btnDisableAudioDevices, btnEnableAudioDevices;
+    private TextBox txtLog;
+    private ProgressBar progressBar;
+    private string configFilePath = "config.ini";
+    
+    public MainForm()
     {
-        var inputSimulator = new InputSimulator();
-        Console.Write("Username: ");
-        string? username = Console.ReadLine()?.Trim();
+        LoadConfig();
+        InitializeComponent();
+    }
 
-        Console.Write("Password: ");
-        string? password = ReadPassword();
-        Console.Write("\n");        
+    private void LoadConfig()
+{
+    if (!File.Exists(configFilePath))
+    {
+        File.WriteAllText(configFilePath, "# config.ini\n"
+            + "ExpectedAudioDevice=ExtronScalerD (HD Audio Driver for Display Audio)\n"
+            + "ExpectedMicrophone=COLLABORATE Versa USB Input (COLLABORATE Versa USB)\n"
+            + "FileToCheck=C:\\timestamp.txt\n"
+            + "FileToCheck2=C:\\timestamp_Instruct.txt\n"
+            + "ExpectedZoomPath=C:\\Program Files\\Zoom\\bin\\Zoom.exe\n"
+            + "ExpectedTeamsPath=C:\\Program Files (x86)\\Teams Installer\\Teams.exe\n"
+            + "ExpectedVisualizerPath=C:\\Program Files (x86)\\IPEVO\\Visualizer\\Visualizer.exe\n"
+            + "ZoomInstallPath=\\\\cm\\source\\Zoom\\Zoom CFR\\InstallsZoomClientHDEnabled.bat\n"
+            + "TeamsInstallPath=https://go.microsoft.com/fwlink/?linkid=2281613&clcid=0x409&culture=en-us&country=us\n"
+            + "VisualizerInstallPath=\\\\cm\\source\\IPEVO Presenter\\Visualizer\\Visualizer_win7-11_v3.6.4.1.msi\n");
+    }
+}
 
-        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+    private string GetConfigValue(string key)
+    {
+        foreach (var line in File.ReadAllLines(configFilePath))
         {
-            Console.WriteLine("Username or password cannot be empty. Exiting...");
-            return;
+            if (!line.StartsWith("#") && line.Contains("="))
+            {
+                var parts = line.Split('=');
+                if (parts[0].Trim() == key)
+                {
+                    return parts[1].Trim();
+                }
+            }
         }
-
-        Console.WriteLine(new string('-', 40));
-        Console.WriteLine("\nStarting script...\n");
-        Console.WriteLine("[DO NOT TOUCH KEYBOARD/MOUSE]\n");
-        Console.WriteLine(new string('-', 40));
-
-        // Open system settings
-        OpenWindowsSetting("ms-settings:display", "DISPLAY");
-        OpenWindowsSetting("ms-settings:sound", "SOUND");
-
-        // Retrieve and display audio devices
-        DisplayAudioDevices();
-
-        // Start and focus Zoom
-        StartAndFocusZoom();
-        Thread.Sleep(3000);
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.TAB);
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.TAB);
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.TAB);
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.TAB);
-        inputSimulator.Keyboard.KeyDown(VirtualKeyCode.RETURN);
-        Thread.Sleep(3000);
-        // Simulate login actions
-        SimulateLogin(username, password);
-
-        Console.WriteLine("Script completed successfully.");
+        return string.Empty;
     }
 
-    static string ReadPassword()
+    private void InitializeComponent()
     {
-        string password = "";
-        ConsoleKeyInfo key;
+        this.Text = "System Diagnostics";
+        this.Size = new System.Drawing.Size(800, 600);
+        this.MinimumSize = new System.Drawing.Size(600, 400);
 
-        do
+        btnRunAllTests = new Button { Text = "Run All Tests", Dock = DockStyle.Top, Height = 40 };
+        btnRunAllTests.Click += (s, e) => RunTest(RunAllTests, btnRunAllTests);
+        
+        btnCheckAVSettings = new Button { Text = "AV Settings Test", Dock = DockStyle.Top, Height = 40 };
+        btnCheckAVSettings.Click += (s, e) => RunTest(CheckAVSettings, btnCheckAVSettings);
+        
+        btnCheckFile = new Button { Text = "Check File Timestamp", Dock = DockStyle.Top, Height = 40 };
+        btnCheckFile.Click += (s, e) => RunTest(CheckFileTimestamp, btnCheckFile);
+        
+        btnCheckWindowsUpdate = new Button { Text = "Check Windows Updates", Dock = DockStyle.Top, Height = 40 };
+        btnCheckWindowsUpdate.Click += (s, e) => RunTest(CheckWindowsUpdates, btnCheckWindowsUpdate);
+        
+        btnCheckTeams = new Button { Text = "Check Microsoft Teams", Dock = DockStyle.Top, Height = 40 };
+        btnCheckTeams.Click += (s, e) => RunTest(CheckMicrosoftTeams, btnCheckTeams);
+        
+        btnCheckZoom = new Button { Text = "Check if Zoom is installed", Dock = DockStyle.Top, Height = 40 };
+        btnCheckZoom.Click += (s, e) => RunTest(CheckZoom, btnCheckZoom);
+
+        btnOpenZoom = new Button { Text = "Open Zoom", Dock = DockStyle.Top, Height = 40 };
+        btnOpenZoom.Click += (s, e) => RunTest(OpenZoom, btnOpenZoom);
+        
+        btnInstallZoom = new Button { Text = "Install Zoom", Dock = DockStyle.Top, Height = 40 };
+        btnInstallZoom.Click += (s, e) => RunTest(InstallZoom, btnInstallZoom);
+
+        btnInstallTeams = new Button { Text = "Install Teams", Dock = DockStyle.Top, Height = 40 };
+        btnInstallTeams.Click += (s, e) => RunTest(InstallTeams, btnInstallTeams);
+
+        btnInstallVisualizer = new Button { Text = "Install Visualizer", Dock = DockStyle.Top, Height = 40 };
+        btnInstallVisualizer.Click += (s, e) => RunTest(InstallVisualizer, btnInstallVisualizer);
+
+        btnDisableAudioDevices = new Button { Text = "Disable Unwanted Audio Devices [Still in Development]", Dock = DockStyle.Top, Height = 40 };
+        btnDisableAudioDevices.Click += (s, e) => RunTest(DisableUnwantedAudioDevices, btnDisableAudioDevices);
+
+        btnEnableAudioDevices = new Button { Text = "Enable All Audio Devices [Still in Development]", Dock = DockStyle.Top, Height = 40 };
+        btnEnableAudioDevices.Click += (s, e) => RunTest(EnableAllAudioDevices, btnEnableAudioDevices);
+
+        btnCheckVisualizer = new Button { Text = "Check if Visualizer is installed", Dock = DockStyle.Top, Height = 40 };
+        btnCheckVisualizer.Click += (s, e) => RunTest(CheckVisualizer, btnCheckVisualizer);
+        
+        txtLog = new TextBox { Multiline = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, ReadOnly = true, Font = new System.Drawing.Font("Consolas", 10) };
+        
+        progressBar = new ProgressBar { Dock = DockStyle.Bottom, Height = 20, Style = ProgressBarStyle.Marquee, Visible = false };
+        
+        this.Controls.Add(txtLog);
+        this.Controls.Add(progressBar);
+        this.Controls.Add(btnInstallZoom);
+        this.Controls.Add(btnOpenZoom);
+        this.Controls.Add(btnCheckZoom);
+        this.Controls.Add(btnInstallTeams);
+        this.Controls.Add(btnCheckTeams);
+        this.Controls.Add(btnInstallVisualizer);
+        this.Controls.Add(btnCheckVisualizer);
+        this.Controls.Add(btnCheckWindowsUpdate);
+        this.Controls.Add(btnCheckFile);
+        this.Controls.Add(btnCheckAVSettings);
+        this.Controls.Add(btnDisableAudioDevices);
+        this.Controls.Add(btnEnableAudioDevices);
+
+        //this.Controls.Add(btnRunAllTests);
+    }
+
+    private void RunTest(Action testMethod, Button btn)
+    {
+        btn.Enabled = false;
+        progressBar.Visible = true;
+        Thread testThread = new Thread(() =>
         {
-            key = Console.ReadKey(true); // 'true' prevents character from showing
-
-            if (key.Key == ConsoleKey.Backspace && password.Length > 0)
-            {
-                // Handle backspace (remove last character)
-                password = password.Substring(0, password.Length - 1);
-                Console.Write("\b \b"); // Erase the last '*' from console
-            }
-            else if (!char.IsControl(key.KeyChar))
-            {
-                password += key.KeyChar;
-                Console.Write("*"); // Mask character
-            }
-        } while (key.Key != ConsoleKey.Enter);
-
-        return password;
+            testMethod();
+            Invoke(new Action(() => progressBar.Visible = false));
+        });
+        testThread.IsBackground = true;
+        testThread.Start();
     }
 
-    static void OpenWindowsSetting(string settingCommand, string settingName)
+    private void RunAllTests()
     {
+        CheckAVSettings();
+        CheckFileTimestamp();
+        CheckWindowsUpdates();
+        CheckMicrosoftTeams();
+        CheckZoom();
+        OpenZoom();
+        InstallZoom();
+        CheckVisualizer();
+    }
+
+    private void CheckAVSettings()
+    {
+        Log("Checking AV settings...");
+        var enumerator = new MMDeviceEnumerator();
+        var defaultPlayback = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+        var defaultRecording = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
+        
+        string expectedPlayback = GetConfigValue("ExpectedAudioDevice");
+        string expectedRecording = GetConfigValue("ExpectedMicrophone");
+        
+        bool playbackMatch = defaultPlayback.FriendlyName.Equals(expectedPlayback, StringComparison.OrdinalIgnoreCase);
+        bool recordingMatch = defaultRecording.FriendlyName.Equals(expectedRecording, StringComparison.OrdinalIgnoreCase);
+        
+        Log($"Default Playback Device: {defaultPlayback.FriendlyName} {(playbackMatch ? "✔" : "✖")}");
+        Log($"Default Recording Device: {defaultRecording.FriendlyName} {(recordingMatch ? "✔" : "✖")}");
+        Log("\n");
+        Log($"Expected Playback Device: {expectedPlayback}");
+        Log($"Expected Recording Device: {expectedRecording}");
+        Log("\n\n");
+    }
+
+ 
+
+private void CheckFileTimestamp()
+{
+    string filePath = GetConfigValue("FileToCheck");
+    string filePath2 = GetConfigValue("FileToCheck2");
+    if (File.Exists(filePath))
+    {
+        Process.Start("notepad.exe", filePath);
+        Log("Timestamp file opened successfully! ✔");
+    }
+    else if (File.Exists(filePath2)) {
+        Process.Start("notepad.exe", filePath2);
+        Log("Timestamp file opened successfully! ✔");
+    }
+    else
+    {
+        Log("Timestamp file not found! ✖");
+    }
+}
+    private void CheckWindowsUpdates()
+    {
+        Log("Checking Windows Updates...");
+        try
+        {
+            Process.Start("explorer.exe", "ms-settings:windowsupdate");
+            Log("Windows Update settings opened successfully! ✔");
+        }
+        catch (Exception ex)
+        {
+            Log($"Failed to open Windows Update settings ✖\nError: {ex.Message}");
+        }
+        Log("\n\n");
+    }
+
+    private void CheckMicrosoftTeams()
+    {
+        string expectedPath = GetConfigValue("ExpectedTeamsPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled)
+        {
+            Log($"Microsoft Teams is installed: ✔");
+            Log($"Path: {expectedPath}");
+        }
+        else {
+            Log("Microsoft Teams is not installed: ✖");
+            DialogResult result = MessageBox.Show("Do you want to proceed?", "Confirmation", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+            {       
+                Log("[User clicked Yes on Teams install]");
+                InstallTeams();
+            }
+                else
+            {
+                Log("[User clicked No on Teams install]");
+            }
+        }
+        Log("\n\n");
+    }
+
+    private void CheckZoom()
+    {
+        string expectedPath = GetConfigValue("ExpectedZoomPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled)
+        {
+            Log($"Zoom is installed: ✔");
+            Log($"Path: {expectedPath}");
+        }
+        else {
+            Log("Zoom is not installed: ✖");
+            DialogResult result = MessageBox.Show("Do you want to proceed?", "Confirmation", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+            {       
+                Log("[User clicked Yes on Zoom install]");
+                InstallZoom();
+            }
+                else
+            {
+                Log("[User clicked No on Zoom install]");
+            }
+        }
+        Log("\n\n");
+    }
+
+    private void InstallZoom() {
+        string expectedPath = GetConfigValue("ZoomInstallPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled) {
+            ProcessStartInfo startInfo = new ProcessStartInfo(expectedPath) {
+                UseShellExecute = true,
+                Verb = "runas" // This specifies to run the process as an administrator
+            };
+            try {
+                Process.Start(startInfo);
+            } catch (System.ComponentModel.Win32Exception) {
+                Log("The user declined the elevation request.");
+            }
+        } else {
+            Log("Could not connect to the network folder: ✖");
+        }
+        Log("\n\n");
+    }
+
+    private void InstallTeams() {
+        string downloadUrl = GetConfigValue("TeamsInstallPath");
         try
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = settingCommand,
+                FileName = downloadUrl,
                 UseShellExecute = true
             });
-            Console.WriteLine($"Opened {settingName} settings.");
+            Log("Microsoft Teams download page opened successfully! ✔");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to open {settingName} settings: {ex.Message}");
+            Log($"Failed to open Microsoft Teams download page: ✖\nError: {ex.Message}");
         }
-        Console.WriteLine(new string('-', 40));
-        Thread.Sleep(2000);
+        Log("\n\n");
+    }
+    
+
+    private void InstallVisualizer() {
+        string expectedPath = GetConfigValue("VisualizerInstallPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled) {
+            ProcessStartInfo startInfo = new ProcessStartInfo(expectedPath) {
+                UseShellExecute = true,
+                Verb = "runas" // This specifies to run the process as an administrator
+            };
+            Process.Start(startInfo);
+        } else {
+            Log("Could not connect to the network folder: ✖");
+        }
+        Log("\n\n");
     }
 
-    static void DisplayAudioDevices()
+    private void OpenZoom()
     {
-        Console.WriteLine("Sound DEVICES list:\n");
-
-        using (var soundsearcher = new ManagementObjectSearcher("SELECT * FROM Win32_SoundDevice"))
-        {
-            foreach (ManagementObject device in soundsearcher.Get())
-            {
-                Console.WriteLine(" - " + device["Name"]);
+        Log("Attempting to open Zoom...");
+        string expectedPath = GetConfigValue("ExpectedZoomPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled) {
+            Process.Start(expectedPath);
+            Log("Zoom opened successfully! ✔");
+        }
+        else if (!isInstalled) {
+            Log("Zoom is not installed! ✖");
+            DialogResult result = MessageBox.Show("Do you want to proceed?", "Confirmation", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+            {       
+                Log("[User clicked Yes on Zoom install]");
+                InstallZoom();
             }
+                else
+            {
+                Log("[User clicked No on Zoom install]");
+            }
+            }
+        else {
+            Log("Failed to open Zoom! ✖");
         }
 
-        Console.WriteLine("Microphone DEVICES list:\n");
+    }
 
-        using (var micsearcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity WHERE Description LIKE '%Microphone%' OR Name LIKE '%Microphone%'"))
-        {
-            foreach (ManagementObject device in micsearcher.Get())
-            {
-                Console.WriteLine(" - " + device["Name"]);
-            }
-        }
-        Console.WriteLine(new string('-', 40));
+   private void DisableUnwantedAudioDevices()
+    {
         var enumerator = new MMDeviceEnumerator();
-        var defaultSpeaker = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        var defaultMicrophone = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+        var devices = enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active);
 
-        if (defaultSpeaker == null)
-            Console.WriteLine("No default audio output device found.");
-        else 
-            Console.WriteLine($"Default Audio Output Device: {defaultSpeaker.FriendlyName}");
-        if (defaultMicrophone == null)
-            Console.WriteLine("No default microphone device found.");
-        else 
-            Console.WriteLine($"Default Microphone Device: {defaultMicrophone.FriendlyName}");
-        Console.WriteLine(new string('-', 40));
-    }
+        string expectedPlayback = GetConfigValue("ExpectedAudioDevice");
+        string expectedRecording = GetConfigValue("ExpectedMicrophone");
 
-    static void StartAndFocusZoom()
-    {
-        try
+        foreach (var device in devices)
         {
-            Process process = Process.Start(@"C:\Program Files\Zoom\bin\Zoom.exe");
-            if (process == null)
+            if (device.DataFlow == DataFlow.Render && !device.FriendlyName.Equals(expectedPlayback, StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Failed to start Zoom.");
-                return;
+                DisableDevice(device.ID);
+                Log($"Disabled playback device: {device.FriendlyName}");
             }
-
-            Console.WriteLine("Zoom application started. Waiting for 'Zoom Meetings' window...");
-
-            IntPtr zoomHWnd = IntPtr.Zero;
-            int attempts = 0;
-
-            // Wait up to 10 seconds for Zoom to open (retry every 500ms)
-            while (attempts < 20)
+            else if (device.DataFlow == DataFlow.Capture && !device.FriendlyName.Equals(expectedRecording, StringComparison.OrdinalIgnoreCase))
             {
-                zoomHWnd = FindWindow(null, "Zoom Meetings"); // Try finding the window
-                if (zoomHWnd != IntPtr.Zero)
-                    break;
-
-                Thread.Sleep(500); // Wait 500ms before retrying
-                attempts++;
-            }
-
-            if (zoomHWnd != IntPtr.Zero)
-            {
-                SetForegroundWindow(zoomHWnd);
-                Console.WriteLine("Zoom Meetings window brought to the foreground.");
-            }
-            else
-            {
-                Console.WriteLine("Unable to find the 'Zoom Meetings' window after waiting.");
+                DisableDevice(device.ID);
+                Log($"Disabled recording device: {device.FriendlyName}");
             }
         }
-        catch (Exception ex)
+
+        SetDefaultAudioDevice(expectedPlayback, DataFlow.Render);
+        SetDefaultAudioDevice(expectedRecording, DataFlow.Capture);
+    }
+
+    private void EnableAllAudioDevices()
+    {
+        var enumerator = new MMDeviceEnumerator();
+        var devices = enumerator.EnumerateAudioEndPoints(DataFlow.All, DeviceState.Disabled);
+
+        foreach (var device in devices)
         {
-            Console.WriteLine($"Error starting Zoom: {ex.Message}");
+            EnableDevice(device.ID);
+            Log($"Enabled audio device: {device.FriendlyName}");
         }
     }
 
-    static IntPtr FindWindowByTitle(string title)
+    private void SetDefaultAudioDevice(string deviceName, DataFlow dataFlow)
     {
-        IntPtr foundHWnd = IntPtr.Zero;
+        var enumerator = new MMDeviceEnumerator();
+        var devices = enumerator.EnumerateAudioEndPoints(dataFlow, DeviceState.Active);
 
-        EnumWindows((hWnd, lParam) =>
+        foreach (var device in devices)
         {
-            if (IsWindowVisible(hWnd))
+            if (device.FriendlyName.Equals(deviceName, StringComparison.OrdinalIgnoreCase))
             {
-                StringBuilder sb = new StringBuilder(256);
-                GetWindowText(hWnd, sb, sb.Capacity);
-
-                if (sb.ToString().Contains(title, StringComparison.OrdinalIgnoreCase))
-                {
-                    foundHWnd = hWnd;
-                    return false; // Stop enumeration
-                }
+                device.AudioEndpointVolume.Mute = false;
+                Log($"Set default {dataFlow} device: {device.FriendlyName}");
+                break;
             }
-            return true; // Continue enumeration
-        }, IntPtr.Zero);
-
-        return foundHWnd;
+        }
     }
 
-    static void SimulateLogin(string username, string password)
+    private void DisableDevice(string deviceId)
     {
-        Console.WriteLine("Logging into Zoom with these credentials...");
-        var inputSimulator = new InputSimulator();
-        Thread.Sleep(3000);
-
-        // Simulate entering username
-        foreach (char c in username)
+        using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_PnPEntity WHERE DeviceID = '{deviceId.Replace("\\", "\\\\")}'"))
         {
-            inputSimulator.Keyboard.TextEntry(c);
-            Thread.Sleep(100);
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                obj.InvokeMethod("Disable", null);
+            }
         }
+    }
 
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.TAB);
-
-        // Simulate entering password
-        foreach (char c in password)
+    private void EnableDevice(string deviceId)
+    {
+        using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_PnPEntity WHERE DeviceID = '{deviceId.Replace("\\", "\\\\")}'"))
         {
-            inputSimulator.Keyboard.TextEntry(c);
-            Thread.Sleep(100);
+            foreach (ManagementObject obj in searcher.Get())
+            {
+                obj.InvokeMethod("Enable", null);
+            }
         }
+    }
 
-        inputSimulator.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-        Console.WriteLine("Zoom login process simulated.");
+    private void CheckVisualizer()
+    {
+        string expectedPath = GetConfigValue("ExpectedVisualizerPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled)
+        {
+            Log($"Visualizer is installed: ✔");
+            Log($"Path: {expectedPath}");
+        }
+        else {
+            Log("Visualizer is not installed: ✖");
+        }
+        Log("\n\n");
+    }
+
+    private void Log(string message)
+    {
+        Invoke(new Action(() => txtLog.AppendText(message + Environment.NewLine)));
+    }
+
+    [STAThread]
+    public static void Main()
+    {
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+        Application.Run(new MainForm());
     }
 }
