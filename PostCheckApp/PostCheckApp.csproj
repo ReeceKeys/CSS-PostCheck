@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,7 @@
     <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="131.0.6778.10800" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <None Include="icon.ico" />
   </ItemGroup>
 
 </Project>
