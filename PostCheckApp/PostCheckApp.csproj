@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType> <!-- This prevents the CMD window -->
     <TargetFramework>net8.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -15,7 +15,15 @@
     <PackageReference Include="Selenium.WebDriver" Version="4.27.0" />
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="131.0.6778.10800" />
     <PackageReference Include="System.Management" Version="8.0.0" />
+    <Reference Include="UIAutomationClient" />
     <None Include="icon.ico" />
   </ItemGroup>
+
+  <Target Name="MoveDependencies" AfterTargets="Publish">
+    <ItemGroup>
+        <DependencyFiles Include="$(PublishDir)\**\*.dll;$(PublishDir)\**\*.pdb;$(PublishDir)\**\*.json;$(PublishDir)\**\*.xml" />
+    </ItemGroup>
+    <Move SourceFiles="@(DependencyFiles)" DestinationFolder="$(PublishDir)\dependencies\" />
+</Target>
 
 </Project>

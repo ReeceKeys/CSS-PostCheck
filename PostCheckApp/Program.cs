@@ -13,7 +13,6 @@ using System.ServiceProcess;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 
 
 
@@ -39,6 +38,7 @@ public class MainForm : Form
             + "ExpectedZoomPath=C:\\Program Files\\Zoom\\bin\\Zoom.exe\n"
             + "ExpectedTeamsPath=C:\\Program Files (x86)\\Teams Installer\\Teams.exe\n"
             + "ExpectedVisualizerPath=C:\\Program Files (x86)\\IPEVO\\Visualizer\\Visualizer.exe\n"
+            + "ExpectedCitrixPath=C:\\Program Files (x86)\\Citrix\\ICA Client"
             + "ZoomInstallPath=\\\\cm\\source\\Zoom\\Zoom CFR\\InstallsZoomClientHDEnabled.bat\n"
             + "TeamsInstallPath=\\\\cm\\source\\Microsoft Teams\\Install Teams.cmd\n"
             + "VisualizerInstallPath=\\\\cm\\source\\IPEVO Presenter\\Visualizer_win7-11_v3.6.4.1.msi\n"
@@ -63,164 +63,198 @@ public class MainForm : Form
     }
 
     private Dictionary<string, ListViewItem> testItems;
-    private TextBox txtLog;
-    private ProgressBar progressBar;
-    
+    private TextBox txtLog;    
     private Button btnCheckAVSettings, btnCheckFile, btnCheckWindowsUpdate;
     private Button btnCheckTeams, btnCheckZoom, btnOpenZoom, btnOpenCustom, btnUSBDetect;
-    private Button btnInstallZoom, btnInstallTeams, btnInstallVisualizer, btnCheckVisualizer;
+    private Button btnInstallZoom, btnInstallTeams, btnInstallVisualizer, btnCheckVisualizer, btnRunAllTests;
     private Button btnEnableAudioDevices, btnChangeDisplaySetting, btnGPupdate, btnGroupPolicy, btnOpenApp;
     private bool test_passed = false;
     private string panel_color = "#FFFFFF";
     private string button_color = "#F0FFF0";
     private string main_bg_color = "#FDFFBA";
-
+    public string fail_log;
+    public bool update_done;
+    
 
 
     private void InitializeComponent()
-{
-    this.Text = "System Diagnostics";
-    this.Size = new System.Drawing.Size(420, 800);
-    this.MinimumSize = new System.Drawing.Size(420, 800);
+    {
+        this.Text = "System Diagnostics";
+        this.Size = new System.Drawing.Size(420, 800);
+        this.MinimumSize = new System.Drawing.Size(420, 800);
 
-    testItems = new Dictionary<string, ListViewItem>();
+        testItems = new Dictionary<string, ListViewItem>();
 
-    // Main content panel
-    Panel mainPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10), BackColor = ColorTranslator.FromHtml(main_bg_color) };
+        // Main content panel
+        Panel mainPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10), BackColor = ColorTranslator.FromHtml(main_bg_color) };
 
-    // Test categories
-    GroupBox grpSystemTests = new GroupBox { Text = "System Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
-    GroupBox grpAVTests = new GroupBox { Text = "Audio/Visual Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
-    GroupBox grpZoomTeamsTests = new GroupBox { Text = "Zoom/Teams Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
-    GroupBox grpInstallTests = new GroupBox { Text = "Install Programs", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
-    GroupBox grpInstallTests2 = new GroupBox { Text = "Installations Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        // Test categories
+        GroupBox grpSystemTests = new GroupBox { Text = "System Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        GroupBox grpAVTests = new GroupBox { Text = "Audio/Visual Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        GroupBox grpZoomTeamsTests = new GroupBox { Text = "Zoom/Teams Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        GroupBox grpInstallTests = new GroupBox { Text = "Install Programs", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        GroupBox grpInstallTests2 = new GroupBox { Text = "Installations Tests", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+        GroupBox grpSweepTest = new GroupBox { Text = "Sweep", Dock = DockStyle.Top, Height = 90, BackColor= ColorTranslator.FromHtml(panel_color) };
+
+        FlowLayoutPanel sysPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        FlowLayoutPanel avPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        FlowLayoutPanel zoomTeamsPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        FlowLayoutPanel installPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        FlowLayoutPanel installTestPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        FlowLayoutPanel runSweepPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+
+        // Buttons
+        btnCheckWindowsUpdate = new Button { Text = "Check Windows Updates", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnCheckFile = new Button { Text = "Check File Timestamp", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnCheckAVSettings = new Button { Text = "AV Settings Test", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnEnableAudioDevices = new Button { Text = "Enable/Disable Sound Settings", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnGPupdate = new Button { Text = "Run gpupdate /force", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnGroupPolicy = new Button { Text = "Group Policies", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnOpenZoom = new Button { Text = "Open Zoom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnOpenCustom = new Button { Text = "Open Custom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+
+        btnInstallZoom = new Button { Text = "Install Zoom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnInstallTeams = new Button { Text = "Install Microsoft Teams", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnInstallVisualizer = new Button { Text = "Install Visualizer", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnCheckVisualizer = new Button { Text = "Check if Visualizer is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnCheckTeams = new Button { Text = "Check if Microsoft Teams is installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnCheckZoom = new Button { Text = "Check if Zoom is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnChangeDisplaySetting = new Button { Text = "Duplicate Display Settings", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnUSBDetect = new Button { Text = "Detect USB Devices", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnRunAllTests = new Button { Text = "Run Sweep", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        btnChangeDisplaySetting.Click += (s, e) => ChangeDisplay();
+        btnOpenApp = new Button { Text = "Open App", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+
+        // Event Handlers
+        btnCheckWindowsUpdate.Click += (s, e) => RunTest(CheckWindowsUpdates, btnCheckWindowsUpdate);
+        btnCheckFile.Click += (s, e) => RunTest(CheckFileTimestamp, btnCheckFile);
+        btnCheckAVSettings.Click += (s, e) => RunTest(CheckAVSettings, btnCheckAVSettings);
+        btnEnableAudioDevices.Click += (s, e) => RunTest(OpenSoundSettings, btnEnableAudioDevices);
+        btnGPupdate.Click += (s, e) => RunTest(GPUpdate, btnGPupdate);
+        btnGroupPolicy.Click += (s, e) => RunTest(GPResult, btnGroupPolicy);
+        btnUSBDetect.Click += (s, e) => RunTest(DetectUSBDevices, btnUSBDetect);
+        btnOpenApp.Click += (s, e) => ShowAppSelectionDialog();
+
+        btnCheckTeams.Click += (s, e) => RunTest(CheckMicrosoftTeams, btnCheckTeams);
+        btnCheckZoom.Click += (s, e) => RunTest(CheckZoom, btnCheckZoom);
+        btnOpenZoom.Click += (s, e) => RunTest(OpenZoom, btnOpenZoom);
+        btnOpenCustom.Click += (s, e) => RunTest(OpenCustom, btnOpenCustom);
+
+        btnInstallZoom.Click += (s, e) => RunTest(InstallZoom, btnInstallZoom);
+        btnInstallTeams.Click += (s, e) => RunTest(InstallTeams, btnInstallTeams);
+        btnInstallVisualizer.Click += (s, e) => RunTest(InstallVisualizer, btnInstallVisualizer);
+        btnCheckVisualizer.Click += (s, e) => RunTest(CheckVisualizer, btnCheckVisualizer);
+        btnRunAllTests.Click += (s, e) => RunTest(RunAllTests, btnRunAllTests);
+
+        // Add buttons to respective panels
+        sysPanel.Controls.AddRange(new Control[] { btnCheckWindowsUpdate, btnCheckFile, btnGPupdate, btnGroupPolicy });
+        avPanel.Controls.AddRange(new Control[] { btnCheckAVSettings, btnEnableAudioDevices, btnChangeDisplaySetting, btnUSBDetect  });
+        zoomTeamsPanel.Controls.AddRange(new Control[] { btnOpenApp, btnOpenCustom });
+        installPanel.Controls.AddRange(new Control[] { btnInstallZoom, btnInstallTeams, btnInstallVisualizer });
+        installTestPanel.Controls.AddRange(new Control[] { btnCheckZoom, btnCheckTeams, btnCheckVisualizer });
+        runSweepPanel.Controls.AddRange(new Control[] { btnRunAllTests });
+
+        // Add panels to group boxes
+        grpSystemTests.Controls.Add(sysPanel);
+        grpAVTests.Controls.Add(avPanel);
+        grpZoomTeamsTests.Controls.Add(zoomTeamsPanel);
+        grpInstallTests.Controls.Add(installPanel);
+        grpInstallTests2.Controls.Add(installTestPanel);
+        grpSweepTest.Controls.Add(runSweepPanel);
 
 
-    FlowLayoutPanel sysPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
-    FlowLayoutPanel avPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
-    FlowLayoutPanel zoomTeamsPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
-    FlowLayoutPanel installPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
-    FlowLayoutPanel installTestPanel = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, BackColor = ColorTranslator.FromHtml(panel_color) };
+        // Log and progress bar
+        txtLog = new TextBox { Multiline = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, ReadOnly = true, Font = new Font("Consolas", 10) };
+        txtLog.BackColor = Color.White;
 
-    // Buttons
-    btnCheckWindowsUpdate = new Button { Text = "Check Windows Updates", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnCheckFile = new Button { Text = "Check File Timestamp", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnCheckAVSettings = new Button { Text = "AV Settings Test", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnEnableAudioDevices = new Button { Text = "Enable/Disable Sound Settings", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnGPupdate = new Button { Text = "Run gpupdate /force", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnGroupPolicy = new Button { Text = "Group Policies", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnOpenZoom = new Button { Text = "Open Zoom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnOpenCustom = new Button { Text = "Open Custom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        // Add components to main panel
+        mainPanel.Controls.Add(txtLog);
+        mainPanel.Controls.Add(grpSweepTest);
+        mainPanel.Controls.Add(grpInstallTests2);
+        mainPanel.Controls.Add(grpInstallTests);
+        mainPanel.Controls.Add(grpZoomTeamsTests);
+        mainPanel.Controls.Add(grpAVTests);
+        mainPanel.Controls.Add(grpSystemTests);
 
-    btnInstallZoom = new Button { Text = "Install Zoom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnInstallTeams = new Button { Text = "Install Microsoft Teams", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnInstallVisualizer = new Button { Text = "Install Visualizer", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnCheckVisualizer = new Button { Text = "Check if Visualizer is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnCheckTeams = new Button { Text = "Check if Microsoft Teams is installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnCheckZoom = new Button { Text = "Check if Zoom is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnChangeDisplaySetting = new Button { Text = "Duplicate Display Settings", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnUSBDetect = new Button { Text = "Detect USB Devices", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-    btnChangeDisplaySetting.Click += (s, e) => ChangeDisplay();
-    btnOpenApp = new Button 
-{ 
-    Text = "Open App", 
-    Width = 180, 
-    BackColor = ColorTranslator.FromHtml(button_color) 
-};
+        // Add components to form
+        this.Controls.Add(mainPanel);
+        //Log("Welcome to the CSUSM CSS Sweep Script\nDeveloped by Reece Harris & Calvary Fisher\n\n");
+    }
 
-
-
-    // Event Handlers
-    btnCheckWindowsUpdate.Click += (s, e) => RunTest(CheckWindowsUpdates, btnCheckWindowsUpdate);
-    btnCheckFile.Click += (s, e) => RunTest(CheckFileTimestamp, btnCheckFile);
-    btnCheckAVSettings.Click += (s, e) => RunTest(CheckAVSettings, btnCheckAVSettings);
-    btnEnableAudioDevices.Click += (s, e) => RunTest(OpenSoundSettings, btnEnableAudioDevices);
-    btnGPupdate.Click += (s, e) => RunTest(GPUpdate, btnGPupdate);
-    btnGroupPolicy.Click += (s, e) => RunTest(GPResult, btnGroupPolicy);
-    btnUSBDetect.Click += (s, e) => RunTest(DetectUSBDevices, btnUSBDetect);
-    btnOpenApp.Click += (s, e) => ShowAppSelectionDialog();
-
-    btnCheckTeams.Click += (s, e) => RunTest(CheckMicrosoftTeams, btnCheckTeams);
-    btnCheckZoom.Click += (s, e) => RunTest(CheckZoom, btnCheckZoom);
-    btnOpenZoom.Click += (s, e) => RunTest(OpenZoom, btnOpenZoom);
-    btnOpenCustom.Click += (s, e) => RunTest(OpenCustom, btnOpenCustom);
-
-
-    btnInstallZoom.Click += (s, e) => RunTest(InstallZoom, btnInstallZoom);
-    btnInstallTeams.Click += (s, e) => RunTest(InstallTeams, btnInstallTeams);
-    btnInstallVisualizer.Click += (s, e) => RunTest(InstallVisualizer, btnInstallVisualizer);
-    btnCheckVisualizer.Click += (s, e) => RunTest(CheckVisualizer, btnCheckVisualizer);
-
-    // Add buttons to respective panels
-    sysPanel.Controls.AddRange(new Control[] { btnCheckWindowsUpdate, btnCheckFile, btnGPupdate, btnGroupPolicy });
-    avPanel.Controls.AddRange(new Control[] { btnCheckAVSettings, btnEnableAudioDevices, btnChangeDisplaySetting, btnUSBDetect  });
-    zoomTeamsPanel.Controls.AddRange(new Control[] { btnOpenApp, btnOpenCustom });
-    installPanel.Controls.AddRange(new Control[] { btnInstallZoom, btnInstallTeams, btnInstallVisualizer });
-    installTestPanel.Controls.AddRange(new Control[] { btnCheckZoom, btnCheckTeams, btnCheckVisualizer });
-
-
-    // Add panels to group boxes
-    grpSystemTests.Controls.Add(sysPanel);
-    grpAVTests.Controls.Add(avPanel);
-    grpZoomTeamsTests.Controls.Add(zoomTeamsPanel);
-    grpInstallTests.Controls.Add(installPanel);
-    grpInstallTests2.Controls.Add(installTestPanel);
-
-    // Log and progress bar
-    txtLog = new TextBox { Multiline = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical, ReadOnly = true, Font = new Font("Consolas", 10) };
-    txtLog.BackColor = Color.White;  
-    progressBar = new ProgressBar { Dock = DockStyle.Bottom, Height = 20, Style = ProgressBarStyle.Marquee, Visible = false };
-
-    // Add components to main panel
-    mainPanel.Controls.Add(txtLog);
-    mainPanel.Controls.Add(progressBar);
-    mainPanel.Controls.Add(grpInstallTests2);
-    mainPanel.Controls.Add(grpInstallTests);
-    mainPanel.Controls.Add(grpZoomTeamsTests);
-    mainPanel.Controls.Add(grpAVTests);
-    mainPanel.Controls.Add(grpSystemTests);
-
-    // Add components to form
-    this.Controls.Add(mainPanel);
-    //Log("Welcome to the CSUSM CSS Sweep Script\nDeveloped by Reece Harris & Calvary Fisher\n\n");
-}
 
 
     private void RunTest(Action testMethod, Button btn)
     {
-        btn.Enabled = false;  // Disable button to prevent multiple rapid clicks
-        progressBar.Visible = true;
-        test_passed = false; 
+        btn.Enabled = false;
+        test_passed = false;
 
-        Thread testThread = new Thread(() =>
-        {
-            testMethod();
+        testMethod();
+        
+        Application.DoEvents(); // Keeps UI responsive during long operations
 
-            // Re-enable button and hide progress bar after test completes (if it doesn't pass the test)
-            Invoke(new Action(() =>
-            {
-                if (!test_passed) 
-                    btn.Enabled = true;
-                progressBar.Visible = false;
-                
-            }));
-        });
-
-        testThread.IsBackground = true;
-        testThread.Start();
+        if (!test_passed) 
+            btn.Enabled = true;
     }
+
+    
+    
+    private ManualResetEvent updateDoneEvent = new ManualResetEvent(false);
+
+    // Assume updateDoneEvent is declared at class level:
+// private ManualResetEvent updateDoneEvent = new ManualResetEvent(false);
 
     private void RunAllTests()
     {
-        CheckAVSettings();
-        CheckFileTimestamp();
-        CheckWindowsUpdates();
-        CheckMicrosoftTeams();
-        CheckZoom();
-        OpenZoom();
-        InstallZoom();
-        CheckVisualizer();
+        fail_log = "[FAIL LOG]\n\n";
+        Log("Running all tests...\n");
+        
+        updateDoneEvent.Reset(); // Reset the event for this test
+        RunTest(CheckWindowsUpdates, btnCheckWindowsUpdate);
+        updateDoneEvent.WaitOne(); // Wait until CheckWindowsUpdates signals completion
+
+        // AV Test - Execute CheckAVSettings and CheckFileTimestamp sequentially
+        updateDoneEvent.Reset();
+        RunTest(CheckAVSettings, btnCheckAVSettings);
+        updateDoneEvent.WaitOne();
+
+        updateDoneEvent.Reset();
+        RunTest(CheckFileTimestamp, btnCheckFile);
+        updateDoneEvent.WaitOne();
+        
+        // Install Test - Run each test sequentially        
+        updateDoneEvent.Reset();
+        RunTest(CheckMicrosoftTeams, btnCheckTeams);
+        updateDoneEvent.WaitOne();
+
+        updateDoneEvent.Reset();
+        RunTest(CheckZoom, btnCheckZoom);
+        updateDoneEvent.WaitOne();
+
+        updateDoneEvent.Reset();
+        RunTest(CheckVisualizer, btnCheckVisualizer);
+        updateDoneEvent.WaitOne();
+
+        updateDoneEvent.Reset();
+        RunTest(OpenZoom, btnCheckZoom);
+        updateDoneEvent.WaitOne();
+        updateDoneEvent.Reset();
+        // Report the final result
+        if (fail_log != "[FAIL LOG]\n")
+        {
+            Log("\n\n\n\n\n");
+            Log(fail_log);
+            test_passed = false;
+        }
+        else
+        {
+            Log("All tests passed!\n");
+            test_passed = true;
+        }
+        Log("[TEST COMPLETE]");
     }
+
+    
+
 
     [DllImport("ole32.dll")]
     private static extern int CoCreateInstance(ref Guid clsid, IntPtr pUnkOuter, uint dwClsContext, ref Guid riid, out IPolicyConfig ppv);
@@ -251,12 +285,13 @@ public class MainForm : Form
         {
             Log("Failed to open Sound settings: " + ex.Message);
         }
+        updateDoneEvent.Set();
     }
 
 
     private void CheckAVSettings()
     {
-        Log("Checking AV settings...");
+        Log("[Checking AV settings...]\n");
         var enumerator = new MMDeviceEnumerator();
         var defaultPlayback = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
         var defaultRecording = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia);
@@ -266,14 +301,29 @@ public class MainForm : Form
         
         bool playbackMatch = defaultPlayback.FriendlyName.Equals(expectedPlayback, StringComparison.OrdinalIgnoreCase);
         bool recordingMatch = defaultRecording.FriendlyName.Equals(expectedRecording, StringComparison.OrdinalIgnoreCase);
-        Log($"Default Playback Device: {defaultPlayback.FriendlyName} {(playbackMatch ? "✔" : "✖")}");
-        Log($"Default Recording Device: {defaultRecording.FriendlyName} {(recordingMatch ? "✔" : "✖")}");
+        if (playbackMatch) {
+            Log("Playback devices match! ✔");
+        }
+        else {
+            Log("Playback devices do not match! ✖");
+            fail_log += "Playback devices do not match! ✖\n\n";
+        }
+        if (recordingMatch) {
+            Log("Recording devices match! ✔");
+        }
+        else {
+            Log("Recording devices do not match! ✖");
+            fail_log += "Recording devices do not match! ✖\n\n";
+        }
+        Log($"Default Playback Device: {defaultPlayback.FriendlyName}");
+        Log($"Default Recording Device: {defaultRecording.FriendlyName}");
         Log("\n");
         Log($"Expected Playback Device: {expectedPlayback}");
         Log($"Expected Recording Device: {expectedRecording}");
-        Log("\n\n");
+        Log("\n");
         DetectCameraDevice();
         Log("\n\n");
+        updateDoneEvent.Set();
     }
 private void ChangeDisplay()
 {
@@ -300,6 +350,7 @@ private void ChangeDisplay()
         // Cancel: Do nothing
         Log("Display setting change was canceled.");
     }
+    updateDoneEvent.Set();
 }
 
 private void SetDisplayMode(string mode)
@@ -322,57 +373,125 @@ private void SetDisplayMode(string mode)
     {
         Log($"Failed to change display settings: {ex.Message}");
     }
+    
 }
-
-
- 
 
 private void CheckFileTimestamp()
 {
+    Log("[Timestamp Check]\n");
     string filePath = GetConfigValue("FileToCheck");
     string filePath2 = GetConfigValue("FileToCheck2");
     if (File.Exists(filePath))
     {
         Process.Start("notepad.exe", filePath);
-        Log("Timestamp file opened successfully! ✔");
+        Log("Timestamp file opened successfully! ✔\n");
+        updateDoneEvent.Set();
     }
     else if (File.Exists(filePath2)) {
         Process.Start("notepad.exe", filePath2);
-        Log("Timestamp file opened successfully! ✔");
+        Log("Timestamp file opened successfully! ✔\n");
+        updateDoneEvent.Set();
     }
     else
     {
-        Log("Timestamp file not found! ✖");
+        Log("Timestamp file not found! ✖\n");
+        fail_log += "Timestamp file not found! ✖\n";
+        updateDoneEvent.Set();
     }
+    Log("\n\n");
 }
+    const int VK_TAB = 0x09;
+    const int VK_RETURN = 0x0D;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern int keybd_event(byte bVk, byte bScan, int dwFlags, int dwExtraInfo);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern short GetAsyncKeyState(int vKey);
+
+    private static void ShowAutoClosingMessageBox(string message, string title, int timeout)
+    {
+        // Create the MessageBox with a custom timeout
+        MessageBox.Show(message, title);
+        
+        // Sleep for the specified timeout (in milliseconds)
+        Thread.Sleep(timeout);
+    }
+
     private void CheckWindowsUpdates()
     {
-        Log("Checking Windows Updates...");
+        Log("[Windows Update Check]\n");
+
         try
         {
+            ShowAutoClosingMessageBox("Please do not touch your mouse/keyboard while the update check is in progress (until the next pop up)", "Important Information", 4000);
+            // Get all running processes named "SystemSettings" (Settings app)
+            var processes = Process.GetProcessesByName("SystemSettings");
+
+            // If any instances are found, close them
+            foreach (var process in processes)
+            {
+                Console.WriteLine("Closing Settings app...");
+                process.Kill();  // Kill the process (close the app)
+                process.WaitForExit();  // Wait for the process to exit
+            }
+            // Open Windows Update settings
             Process.Start("explorer.exe", "ms-settings:windowsupdate");
-            Log("Windows Update settings opened successfully! ✔");
+            Console.WriteLine("Windows Update settings opened successfully! ✔");
+
+            // Wait for the settings window to open
+            Thread.Sleep(4000);  // Adjust this if the system is slower
+
+            // Simulate pressing Tab (to navigate) and Enter (to "Check for updates")
+            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
+            Thread.Sleep(300); // Wait for a bit before pressing Enter
+            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
+            Thread.Sleep(300); // Wait for a bit before pressing Enter
+            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
+            Thread.Sleep(300); // Wait for a bit before pressing Enter
+            SimulateKeyPress(VK_RETURN);  // Press "Enter" to click "Check for updates"
+
+            Log("Triggered 'Check for updates' successfully! ✔");
+            ShowAutoClosingMessageBox("Update check performed, you may now use your mouse/keyboard", "Important Information", 4000);
+            update_done = true;        
+            updateDoneEvent.Set();
+
         }
         catch (Exception ex)
         {
-            Log($"Failed to open Windows Update settings ✖\nError: {ex.Message}");
+            Log($"Error: {ex.Message}");
+            updateDoneEvent.Set();
         }
         Log("\n\n");
     }
 
+    
+
+    // Method to simulate key press
+    private static void SimulateKeyPress(int keyCode)
+    {
+        keybd_event((byte)keyCode, 0, 0, 0);  // Key down
+        keybd_event((byte)keyCode, 0, 2, 0);  // Key up
+    }
+
     private void CheckMicrosoftTeams()
     {
+        Log("[Microsoft Teams Install Check]\n");
         string expectedPath = GetConfigValue("ExpectedTeamsPath");
         bool isInstalled = File.Exists(expectedPath);
-        if (isInstalled)
+        string teamsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Teams");
+        bool isInstalled2 = Directory.Exists(teamsPath);
+        if (isInstalled || isInstalled2)
         {
             Log($"Microsoft Teams is installed: ✔");
-            Log($"Path: {expectedPath}");
+            if (isInstalled)
+                Log($"Path: {expectedPath}");
+            if (isInstalled2)
+                Log($"Path: {teamsPath}");
             test_passed = true;
         }
         else {
             Log("Microsoft Teams is not installed: ✖");
-            DialogResult result = MessageBox.Show("Do you want to proceed?", "Confirmation", MessageBoxButtons.YesNo);
+            DialogResult result = MessageBox.Show("Teams is not installed, would you like to install?", "Confirmation", MessageBoxButtons.YesNo);
             if (result == DialogResult.Yes)
             {       
                 Log("[User clicked Yes on Teams install]");
@@ -381,13 +500,16 @@ private void CheckFileTimestamp()
                 else
             {
                 Log("[User clicked No on Teams install]");
+                fail_log += "Microsoft Teams is not installed: ✖\n";
             }
         }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
 
     private void CheckZoom()
     {
+        Log("[Zoom Install Check]\n");
         string expectedPath = GetConfigValue("ExpectedZoomPath");
         bool isInstalled = File.Exists(expectedPath);
         if (isInstalled)
@@ -398,23 +520,26 @@ private void CheckFileTimestamp()
         }
         else {
             Log("Zoom is not installed: ✖");
-            DialogResult result = MessageBox.Show("Do you want to proceed?", "Confirmation", MessageBoxButtons.YesNo);
+            DialogResult result = MessageBox.Show("Zoom is not installed, would you like to install?", "Confirmation", MessageBoxButtons.YesNo);
             if (result == DialogResult.Yes)
             {       
                 Log("[User clicked Yes on Zoom install]");
                 InstallZoom();
             }
-                else
+            else
             {
                 Log("[User clicked No on Zoom install]");
+                fail_log += "Zoom is not installed: ✖\n";
             }
         }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
 
     private void DetectCameraDevice()
 {
     List<string> cameraNames = new List<string> {"AVer TR313V2", "AVer TR313"};
+    Log("[Checking for AVER camera connection]\n");
     try
     {
         // Query Win32_PnPEntity to get camera devices
@@ -433,12 +558,14 @@ private void CheckFileTimestamp()
                 }
             }
         }
-
-        Log("No matching camera device found. ✖");
+        Log("No matching camera device found! ✖");
+        fail_log += "No matching camera device found! ✖\n";
+        updateDoneEvent.Set();
     }
     catch (Exception e)
     {
         Log($"Error detecting camera: {e.Message}");
+        updateDoneEvent.Set();
     }
 }
 
@@ -452,13 +579,15 @@ private void CheckFileTimestamp()
             };
             try {
                 Process.Start(startInfo);
-                Log("Initialized Zoom install: ✔");
+                Log("Initialized Zoom install ✔");
             } catch (System.ComponentModel.Win32Exception) {
-                Log("The user declined the elevation request.");
+                Log("The user declined the elevation request ✖");
             }
         } else {
-            Log("Could not connect to the network folder: ✖");
+            Log("Could not connect to the network folder ✖");
+            fail_log += "Could not install Zoom ✖\n";
         }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
 
@@ -474,11 +603,13 @@ private void CheckFileTimestamp()
                 Process.Start(startInfo);
                 Log("Initialized Teams install: ✔");
             } catch (System.ComponentModel.Win32Exception) {
-                Log("The user declined the elevation request.");
+                Log("The user declined the elevation request ✖");
             }
         } else {
             Log("Could not connect to the network folder: ✖");
+            fail_log += "Could not install Teams ✖\n\n";
         }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
     
@@ -494,18 +625,20 @@ private void CheckFileTimestamp()
         try
         {
             Process.Start(startInfo);
-            Log("Initialized Zoom install: ✔");
+            Log("Initialized Visualizer install: ✔");
         }
         catch (Exception ex)
         {
             MessageBox.Show($"An error occurred: {ex.Message}");
+            fail_log += "Could not install Visualizer ✖\n\n";
         }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
 
     private void OpenZoom()
     {
-        Log("Attempting to open Zoom...");
+        Log("[Attempting to open Zoom...]\n");
         string expectedPath = GetConfigValue("ExpectedZoomPath");
         bool isInstalled = File.Exists(expectedPath);
         if (isInstalled) {
@@ -523,13 +656,15 @@ private void CheckFileTimestamp()
                 else
             {
                 Log("[User clicked No on Zoom install]");
+                fail_log += "[User clicked No on Zoom install]\n";
             }
             }
         else {
             Log("Failed to open Zoom! ✖");
+            fail_log += "Failed to open Zoom! ✖\n";
         }
-
-    }
+        updateDoneEvent.Set();
+    }   
 
     private void OpenCustom()
     {
@@ -538,68 +673,21 @@ private void CheckFileTimestamp()
         bool isInstalled = File.Exists(expectedPath);
         if (isInstalled) {
             Process.Start(expectedPath);
-            Log("Program opened successfully! ✔");
+            Log("Custom program opened successfully! ✔");
         }
         else if (!isInstalled) {
-            Log("Program path is not correct! ✖");
+            Log("Custom program path is not correct! ✖");
+            fail_log += "Custom program path is not correct! ✖";
+    
         }
         else {
-            Log("Could not start file! ✖");
+            Log("Could not start custom program! ✖");
+            fail_log += "Could not start custom program! ✖";
         }
+        updateDoneEvent.Set();
 
     }
 
-    private void SetBothAudio() {
-        Log("Attempting to set both audio devices to default...");
-        SetDefaultAudioDevice($"{GetConfigValue("ExpectedMicrophone")}", DataFlow.Capture);
-        SetDefaultAudioDevice($"{GetConfigValue("ExpectedAudioDevice")}", DataFlow.Render);
-    }
-
-    private void SetDefaultAudioDevice(string deviceName, DataFlow dataFlow)
-    {
-        var enumerator = new MMDeviceEnumerator();
-        var devices = enumerator.EnumerateAudioEndPoints(dataFlow, DeviceState.Active);
-
-        foreach (var device in devices)
-        {
-            if (device.FriendlyName.Equals(deviceName, StringComparison.OrdinalIgnoreCase))
-            {
-                // Unmute the device (optional)
-                device.AudioEndpointVolume.Mute = false;
-                Log($"Unmuted {dataFlow} device: {device.FriendlyName}");
-
-                // Now set this device as the default
-                SetAsDefaultAudioDevice(device.ID);
-                Log($"Set {dataFlow} device as default: {device.FriendlyName}");
-                break;
-            }
-        }
-    }
-
-    // Using the IPolicyConfig COM interface to set the default device
-    private void SetAsDefaultAudioDevice(string deviceId)
-    {
-        // Create the IPolicyConfig instance
-        IPolicyConfig policyConfig;
-        int result = CoCreateInstance(ref CLSID_PolicyConfig, IntPtr.Zero, 0, ref IID_IPolicyConfig, out policyConfig);
-        
-        if (result != 0)
-        {
-            Log($"CoCreateInstance failed with error code {result}");
-            return;
-        }
-        
-        try
-        {
-            // Set this device as the default for multimedia role
-            policyConfig.SetDefaultEndpoint(deviceId, Role.Multimedia);
-            Log($"Successfully set device {deviceId} as the default multimedia device.");
-        }
-        catch (Exception ex)
-        {
-            Log($"Error setting default device: {ex.Message}");
-        }
-    }
 
     private void DetectUSBDevices()
     {
@@ -638,24 +726,12 @@ private void CheckFileTimestamp()
         {
             Log($"Error getting USB devices: {e.Message}");
         }
-    }
-
-
-
-
-    private void EnableDevice(string deviceId)
-    {
-        using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_PnPEntity WHERE DeviceID = '{deviceId.Replace("\\", "\\\\")}'"))
-        {
-            foreach (ManagementObject obj in searcher.Get())
-            {
-                obj.InvokeMethod("Enable", null);
-            }
-        }
+        updateDoneEvent.Set();
     }
 
     private void CheckVisualizer()
     {
+        Log("[Visualizer Install Check]\n");
         string expectedPath = GetConfigValue("ExpectedVisualizerPath");
         bool isInstalled = File.Exists(expectedPath);
         if (isInstalled)
@@ -666,7 +742,37 @@ private void CheckFileTimestamp()
         }
         else {
             Log("Visualizer is not installed: ✖");
+            DialogResult result = MessageBox.Show("Visualizer is not installed, would you like to install?", "Confirmation", MessageBoxButtons.YesNo);
+            if (result == DialogResult.Yes)
+            {       
+                Log("[User clicked Yes on Visualizer install]");
+                InstallVisualizer();
+            }
+                else
+            {
+                Log("[User clicked No on Visualizer install]");
+                fail_log += "Visualizer is not installed ✖\n";
+            }
         }
+        updateDoneEvent.Set();
+        Log("\n\n");
+    }
+    private void CheckCitrix()
+    {
+        string expectedPath = GetConfigValue("ExpectedCitrixPath");
+        bool isInstalled = File.Exists(expectedPath);
+        if (isInstalled)
+        {
+            Log($"Citrix is installed: ✔");
+            Log($"Path: {expectedPath}");
+            test_passed = true;
+        }
+        else {
+            Log("Citrix is not installed: ✖");
+            fail_log += "Citrix is not installed: ✖\n";
+        
+        }
+        updateDoneEvent.Set();
         Log("\n\n");
     }
 
@@ -699,6 +805,7 @@ private void CheckFileTimestamp()
         {
             Log($"GPUpdate failed: {ex.Message}");
         }
+        updateDoneEvent.Set();
     }
 
     private void ShowAppSelectionDialog()
@@ -753,6 +860,7 @@ private void CheckFileTimestamp()
             Log($"[User clicked No on {appName} install]");
         }
     }
+    updateDoneEvent.Set();
 }
 
 
@@ -761,11 +869,15 @@ private void OpenApplication(string appPath)
 {
     try
     {
+        if (appPath == "https://cougarapps.csusm.edu/Citrix/CougarAppsWeb/")
+            CheckCitrix();
         System.Diagnostics.Process.Start(appPath);
+        updateDoneEvent.Set();
     }
     catch (Exception ex)
     {
         MessageBox.Show("Error opening application: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        updateDoneEvent.Set();
     }
 }
 
@@ -778,10 +890,12 @@ private void OpenWebsite(string url)
             FileName = url,
             UseShellExecute = true
         });
+        updateDoneEvent.Set();
     }
     catch (Exception ex)
     {
         MessageBox.Show("Error opening website: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        updateDoneEvent.Set();
     }
 }
 
@@ -820,6 +934,7 @@ private void OpenWebsite(string url)
         // Delete the temporary file after a delay to ensure Notepad has time to open it
         System.Threading.Thread.Sleep(5000); // Wait for 5 seconds
         File.Delete(tempFilePath);
+        updateDoneEvent.Set();
     }
 
     private string ExtractAdministrativeTemplates(string output)
@@ -851,7 +966,10 @@ private void OpenWebsite(string url)
 
         private void Log(string message)
         {
-            Invoke(new Action(() => txtLog.AppendText(message + Environment.NewLine)));
+            Invoke(new Action(() => {
+                string formattedMessage = message.Replace("\n", Environment.NewLine);
+                txtLog.AppendText(formattedMessage + Environment.NewLine);
+            }));
         }
 
         [STAThread]
