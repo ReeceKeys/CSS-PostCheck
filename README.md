@@ -1,5 +1,8 @@
 # CSUSM Classroom Systems Support IT Sweeps Test Script
 
+## Overview 💻
+This script enhances classroom sweeps of instructor stations by giving a simple app to run our different checks 
+
 ## Description
 
 This script performs the following checks and installations:
