@@ -23,13 +23,16 @@ This script performs the following checks and installations:
 2. **Run the Script**: Execute the test script on the target Windows 10/11 machines.
 3. **Verify Results**: Check the output to ensure all tests pass based on the configuration settings.
 
+##Config
+
+1. If you would like to change paths of files, expected audio devices, etc. - update *config.ini*
+
 ## Installation 💾
 
 To install the necessary software, follow these steps:
 
-1. **Zoom**: Run the installation script located at `\\cm\source\Zoom\Zoom CFR\InstallsZoomClientHDEnabled.bat`.
-2. **Microsoft Teams**: Download and install Teams from this link.
-3. **IPEVO Visualizer**: Run the installer located at `\\cm\source\IPEVO Presenter\Visualizer\Visualizer_win7-11_v3.6.4.1.msi`.
+1. Download the repo -> *note* you only need the PostCheckApp/publish folder to run the executable
+2. Within publish/, run *PostCheckApp.exe*
 
 ## Tests 🧪
 
@@ -38,7 +41,7 @@ The script performs the following tests:
 - **Audio Device Check**: Confirms the presence of the expected audio device.
 - **Microphone Check**: Confirms the presence of the expected microphone.
 - **File Existence Check**: Verifies the existence of specified files.
-- **Software Installation Check**: Ensures that Zoom, Teams, and Visualizer are installed at the expected paths.
+- **Software Installation Check**: Ensures that Zoom and Visualizer are installed at the expected paths.
 
 ## Known Issues ❗
 
