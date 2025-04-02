@@ -23,7 +23,6 @@
     <ItemGroup>
         <DependencyFiles Include="$(PublishDir)\**\*.dll;$(PublishDir)\**\*.pdb;$(PublishDir)\**\*.json;$(PublishDir)\**\*.xml" />
     </ItemGroup>
-    <Move SourceFiles="@(DependencyFiles)" DestinationFolder="$(PublishDir)\dependencies\" />
 </Target>
 
 </Project>

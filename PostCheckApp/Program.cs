@@ -13,6 +13,7 @@ using System.ServiceProcess;
 using Microsoft.Win32;
 using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
+using System.Net;
 
 
 
@@ -36,11 +37,12 @@ public class MainForm : Form
             + "FileToCheck=C:\\timestamp.txt\n"
             + "FileToCheck2=C:\\timestamp_Instruct.txt\n"
             + "ExpectedZoomPath=C:\\Program Files\\Zoom\\bin\\Zoom.exe\n"
-            + "ExpectedTeamsPath=C:\\Program Files (x86)\\Teams Installer\\Teams.exe\n"
+            //+ "ExpectedTeamsPath=C:\\Program Files (x86)\\Teams Installer\\Teams.exe\n"
+            //+ "ExpectedTeamsPath2=%localappdata%\\Microsoft\\Teams\\Current\n"
             + "ExpectedVisualizerPath=C:\\Program Files (x86)\\IPEVO\\Visualizer\\Visualizer.exe\n"
-            + "ExpectedCitrixPath=C:\\Program Files (x86)\\Citrix\\ICA Client"
+            + "ExpectedCitrixPath=C:\\Program Files (x86)\\Citrix\\ICA Client\n"
             + "ZoomInstallPath=\\\\cm\\source\\Zoom\\Zoom CFR\\InstallsZoomClientHDEnabled.bat\n"
-            + "TeamsInstallPath=\\\\cm\\source\\Microsoft Teams\\Install Teams.cmd\n"
+            //+ "TeamsInstallPath=\\\\cm\\source\\Microsoft Teams\\Install Teams.cmd\n"
             + "VisualizerInstallPath=\\\\cm\\source\\IPEVO Presenter\\Visualizer_win7-11_v3.6.4.1.msi\n"
             + "OpenCustom=\n");
     }
@@ -65,8 +67,8 @@ public class MainForm : Form
     private Dictionary<string, ListViewItem> testItems;
     private TextBox txtLog;    
     private Button btnCheckAVSettings, btnCheckFile, btnCheckWindowsUpdate;
-    private Button btnCheckTeams, btnCheckZoom, btnOpenZoom, btnOpenCustom, btnUSBDetect;
-    private Button btnInstallZoom, btnInstallTeams, btnInstallVisualizer, btnCheckVisualizer, btnRunAllTests;
+    private Button btnCheckZoom, btnOpenZoom, btnOpenCustom, btnUSBDetect;
+    private Button btnInstallZoom, /*btnInstallTeams,*/ btnInstallVisualizer, btnCheckVisualizer, btnRunAllTests;
     private Button btnEnableAudioDevices, btnChangeDisplaySetting, btnGPupdate, btnGroupPolicy, btnOpenApp;
     private bool test_passed = false;
     private string panel_color = "#FFFFFF";
@@ -114,10 +116,10 @@ public class MainForm : Form
         btnOpenCustom = new Button { Text = "Open Custom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
 
         btnInstallZoom = new Button { Text = "Install Zoom", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-        btnInstallTeams = new Button { Text = "Install Microsoft Teams", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        //btnInstallTeams = new Button { Text = "Install Microsoft Teams", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
         btnInstallVisualizer = new Button { Text = "Install Visualizer", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
         btnCheckVisualizer = new Button { Text = "Check if Visualizer is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
-        btnCheckTeams = new Button { Text = "Check if Microsoft Teams is installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
+        //btnCheckTeams = new Button { Text = "Check if Microsoft Teams is installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
         btnCheckZoom = new Button { Text = "Check if Zoom is Installed", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
         btnChangeDisplaySetting = new Button { Text = "Duplicate Display Settings", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
         btnUSBDetect = new Button { Text = "Detect USB Devices", Width = 180, BackColor = ColorTranslator.FromHtml(button_color) };
@@ -133,15 +135,15 @@ public class MainForm : Form
         btnGPupdate.Click += (s, e) => RunTest(GPUpdate, btnGPupdate);
         btnGroupPolicy.Click += (s, e) => RunTest(GPResult, btnGroupPolicy);
         btnUSBDetect.Click += (s, e) => RunTest(DetectUSBDevices, btnUSBDetect);
-        btnOpenApp.Click += (s, e) => ShowAppSelectionDialog();
+        btnOpenApp.Click += (s, e) => showApp();
 
-        btnCheckTeams.Click += (s, e) => RunTest(CheckMicrosoftTeams, btnCheckTeams);
+        //btnCheckTeams.Click += (s, e) => RunTest(CheckMicrosoftTeams, btnCheckTeams);
         btnCheckZoom.Click += (s, e) => RunTest(CheckZoom, btnCheckZoom);
         btnOpenZoom.Click += (s, e) => RunTest(OpenZoom, btnOpenZoom);
         btnOpenCustom.Click += (s, e) => RunTest(OpenCustom, btnOpenCustom);
 
         btnInstallZoom.Click += (s, e) => RunTest(InstallZoom, btnInstallZoom);
-        btnInstallTeams.Click += (s, e) => RunTest(InstallTeams, btnInstallTeams);
+        //btnInstallTeams.Click += (s, e) => RunTest(InstallTeams, btnInstallTeams);
         btnInstallVisualizer.Click += (s, e) => RunTest(InstallVisualizer, btnInstallVisualizer);
         btnCheckVisualizer.Click += (s, e) => RunTest(CheckVisualizer, btnCheckVisualizer);
         btnRunAllTests.Click += (s, e) => RunTest(RunAllTests, btnRunAllTests);
@@ -150,8 +152,8 @@ public class MainForm : Form
         sysPanel.Controls.AddRange(new Control[] { btnCheckWindowsUpdate, btnCheckFile, btnGPupdate, btnGroupPolicy });
         avPanel.Controls.AddRange(new Control[] { btnCheckAVSettings, btnEnableAudioDevices, btnChangeDisplaySetting, btnUSBDetect  });
         zoomTeamsPanel.Controls.AddRange(new Control[] { btnOpenApp, btnOpenCustom });
-        installPanel.Controls.AddRange(new Control[] { btnInstallZoom, btnInstallTeams, btnInstallVisualizer });
-        installTestPanel.Controls.AddRange(new Control[] { btnCheckZoom, btnCheckTeams, btnCheckVisualizer });
+        installPanel.Controls.AddRange(new Control[] { btnInstallZoom, /*btnInstallTeams,*/ btnInstallVisualizer });
+        installTestPanel.Controls.AddRange(new Control[] { btnCheckZoom, /*btnCheckTeams,*/ btnCheckVisualizer });
         runSweepPanel.Controls.AddRange(new Control[] { btnRunAllTests });
 
         // Add panels to group boxes
@@ -221,11 +223,12 @@ public class MainForm : Form
         RunTest(CheckFileTimestamp, btnCheckFile);
         updateDoneEvent.WaitOne();
         
-        // Install Test - Run each test sequentially        
+        // Install Test - Run each test sequentially       
+        /* 
         updateDoneEvent.Reset();
         RunTest(CheckMicrosoftTeams, btnCheckTeams);
         updateDoneEvent.WaitOne();
-
+        */
         updateDoneEvent.Reset();
         RunTest(CheckZoom, btnCheckZoom);
         updateDoneEvent.WaitOne();
@@ -239,7 +242,7 @@ public class MainForm : Form
         updateDoneEvent.WaitOne();
         updateDoneEvent.Reset();
         // Report the final result
-        if (fail_log != "[FAIL LOG]\n")
+        if (fail_log != "[FAIL LOG]\n\n")
         {
             Log("\n\n\n\n\n");
             Log(fail_log);
@@ -250,11 +253,9 @@ public class MainForm : Form
             Log("All tests passed!\n");
             test_passed = true;
         }
+        CheckFileTimestamp();
         Log("[TEST COMPLETE]");
     }
-
-    
-
 
     [DllImport("ole32.dll")]
     private static extern int CoCreateInstance(ref Guid clsid, IntPtr pUnkOuter, uint dwClsContext, ref Guid riid, out IPolicyConfig ppv);
@@ -381,23 +382,28 @@ private void CheckFileTimestamp()
     Log("[Timestamp Check]\n");
     string filePath = GetConfigValue("FileToCheck");
     string filePath2 = GetConfigValue("FileToCheck2");
+    string content = null;
+
     if (File.Exists(filePath))
     {
-        Process.Start("notepad.exe", filePath);
-        Log("Timestamp file opened successfully! ✔\n");
-        updateDoneEvent.Set();
+        content = File.ReadAllText(filePath);
     }
-    else if (File.Exists(filePath2)) {
-        Process.Start("notepad.exe", filePath2);
-        Log("Timestamp file opened successfully! ✔\n");
-        updateDoneEvent.Set();
+    else if (File.Exists(filePath2))
+    {
+        content = File.ReadAllText(filePath2);
+    }
+
+    if (content != null)
+    {
+        Log("Timestamp file contents:\n" + content + "\n✔\n");
     }
     else
     {
         Log("Timestamp file not found! ✖\n");
         fail_log += "Timestamp file not found! ✖\n";
-        updateDoneEvent.Set();
     }
+
+    updateDoneEvent.Set();
     Log("\n\n");
 }
     const int VK_TAB = 0x09;
@@ -407,15 +413,7 @@ private void CheckFileTimestamp()
     public static extern int keybd_event(byte bVk, byte bScan, int dwFlags, int dwExtraInfo);
     [DllImport("user32.dll", SetLastError = true)]
     public static extern short GetAsyncKeyState(int vKey);
-
-    private static void ShowAutoClosingMessageBox(string message, string title, int timeout)
-    {
-        // Create the MessageBox with a custom timeout
-        MessageBox.Show(message, title);
-        
-        // Sleep for the specified timeout (in milliseconds)
-        Thread.Sleep(timeout);
-    }
+    private const int SW_MINIMIZE = 6;
 
     private void CheckWindowsUpdates()
     {
@@ -423,47 +421,62 @@ private void CheckFileTimestamp()
 
         try
         {
-            ShowAutoClosingMessageBox("Please do not touch your mouse/keyboard while the update check is in progress (until the next pop up)", "Important Information", 4000);
-            // Get all running processes named "SystemSettings" (Settings app)
+            // Close existing Settings windows
             var processes = Process.GetProcessesByName("SystemSettings");
-
-            // If any instances are found, close them
             foreach (var process in processes)
             {
                 Console.WriteLine("Closing Settings app...");
-                process.Kill();  // Kill the process (close the app)
-                process.WaitForExit();  // Wait for the process to exit
+                process.Kill();
+                process.WaitForExit();
             }
+
             // Open Windows Update settings
             Process.Start("explorer.exe", "ms-settings:windowsupdate");
             Console.WriteLine("Windows Update settings opened successfully! ✔");
 
-            // Wait for the settings window to open
-            Thread.Sleep(4000);  // Adjust this if the system is slower
+            Thread.Sleep(5000);  // Wait for Settings to open
 
-            // Simulate pressing Tab (to navigate) and Enter (to "Check for updates")
-            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
-            Thread.Sleep(300); // Wait for a bit before pressing Enter
-            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
-            Thread.Sleep(300); // Wait for a bit before pressing Enter
-            SimulateKeyPress(VK_TAB);  // Navigate through UI elements
-            Thread.Sleep(300); // Wait for a bit before pressing Enter
-            SimulateKeyPress(VK_RETURN);  // Press "Enter" to click "Check for updates"
+            // Simulate keystrokes
+            SimulateKeyPress(VK_TAB);
+            Thread.Sleep(300);
+            SimulateKeyPress(VK_TAB);
+            Thread.Sleep(300);
+            SimulateKeyPress(VK_TAB);
+            Thread.Sleep(300);
 
+            Version osVersion = Environment.OSVersion.Version;
+            if (osVersion.Major == 10 && osVersion.Build < 22000)
+            {
+                SimulateKeyPress(VK_TAB);
+                Thread.Sleep(300);
+            }
+
+            SimulateKeyPress(VK_RETURN);  // Press Enter to check for updates
             Log("Triggered 'Check for updates' successfully! ✔");
-            ShowAutoClosingMessageBox("Update check performed, you may now use your mouse/keyboard", "Important Information", 4000);
-            update_done = true;        
-            updateDoneEvent.Set();
 
+            // Give time for the button press to register before minimizing
+            Thread.Sleep(2000);
+
+            update_done = true;
+            updateDoneEvent.Set();
+            processes = Process.GetProcessesByName("SystemSettings");
+            foreach (var process in processes)
+            {
+                Console.WriteLine("Closing Settings app...");
+                process.Kill();
+                process.WaitForExit();
+            }
         }
         catch (Exception ex)
         {
             Log($"Error: {ex.Message}");
             updateDoneEvent.Set();
         }
-        Log("\n\n");
+        finally
+        {
+            Log("\n\n");
+        }
     }
-
     
 
     // Method to simulate key press
@@ -473,20 +486,25 @@ private void CheckFileTimestamp()
         keybd_event((byte)keyCode, 0, 2, 0);  // Key up
     }
 
+    /*
     private void CheckMicrosoftTeams()
     {
         Log("[Microsoft Teams Install Check]\n");
         string expectedPath = GetConfigValue("ExpectedTeamsPath");
+        string expectedPath2 = GetConfigValue("ExpectedTeamsPath2");
+        string expectedPath3 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Teams");
         bool isInstalled = File.Exists(expectedPath);
-        string teamsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "Teams");
-        bool isInstalled2 = Directory.Exists(teamsPath);
-        if (isInstalled || isInstalled2)
+        bool isInstalled2 = File.Exists(expectedPath2);
+        bool isInstalled3 = Directory.Exists(expectedPath3);
+        if (isInstalled || isInstalled2 || isInstalled3)
         {
             Log($"Microsoft Teams is installed: ✔");
             if (isInstalled)
                 Log($"Path: {expectedPath}");
             if (isInstalled2)
-                Log($"Path: {teamsPath}");
+                Log($"Path: {expectedPath2}");
+            if (isInstalled3)
+                Log($"Path: {expectedPath3}");
             test_passed = true;
         }
         else {
@@ -506,6 +524,7 @@ private void CheckFileTimestamp()
         updateDoneEvent.Set();
         Log("\n\n");
     }
+    */
 
     private void CheckZoom()
     {
@@ -570,27 +589,37 @@ private void CheckFileTimestamp()
 }
 
     private void InstallZoom() {
-        string expectedPath = GetConfigValue("ZoomInstallPath");
-        bool isInstalled = File.Exists(expectedPath);
-        if (isInstalled) {
-            ProcessStartInfo startInfo = new ProcessStartInfo(expectedPath) {
-                UseShellExecute = true,
-                Verb = "runas" // This specifies to run the process as an administrator
-            };
-            try {
-                Process.Start(startInfo);
-                Log("Initialized Zoom install ✔");
-            } catch (System.ComponentModel.Win32Exception) {
-                Log("The user declined the elevation request ✖");
+        string zoomDownloadUrl = "https://zoom.us/client/latest/ZoomInstallerFull.msi"; // Official Zoom installer URL
+        string tempPath = Path.Combine(Path.GetTempPath(), "ZoomInstaller.msi");
+
+        try
+        {
+            Log("Downloading latest Zoom installer...");
+            using (WebClient client = new WebClient())
+            {
+                client.DownloadFile(zoomDownloadUrl, tempPath);
             }
-        } else {
-            Log("Could not connect to the network folder ✖");
+            Log("Zoom download completed ✔");
+
+            // Run the installer
+            ProcessStartInfo startInfo = new ProcessStartInfo(tempPath)
+            {
+                UseShellExecute = true,
+                Verb = "runas" // Run as administrator
+            };
+
+            Process.Start(startInfo);
+            Log("Zoom installation started ✔");
+        }
+        catch (Exception ex)
+        {
+            Log($"Error: {ex.Message} ✖");
             fail_log += "Could not install Zoom ✖\n";
         }
         updateDoneEvent.Set();
         Log("\n\n");
     }
-
+    /*
     private void InstallTeams() {
         string expectedPath = GetConfigValue("TeamsInstallPath");
         bool isInstalled = File.Exists(expectedPath);
@@ -612,7 +641,7 @@ private void CheckFileTimestamp()
         updateDoneEvent.Set();
         Log("\n\n");
     }
-    
+    */
 
     private void InstallVisualizer() {
         string expectedPath = GetConfigValue("VisualizerInstallPath");
@@ -760,7 +789,7 @@ private void CheckFileTimestamp()
     private void CheckCitrix()
     {
         string expectedPath = GetConfigValue("ExpectedCitrixPath");
-        bool isInstalled = File.Exists(expectedPath);
+        bool isInstalled = Path.Exists(expectedPath);
         if (isInstalled)
         {
             Log($"Citrix is installed: ✔");
@@ -808,6 +837,13 @@ private void CheckFileTimestamp()
         updateDoneEvent.Set();
     }
 
+    private void showApp() {
+        ShowAppSelectionDialog();
+        if (citrix_open == true) {
+            CheckCitrix();
+        }
+    }
+
     private void ShowAppSelectionDialog()
     {
         Form appDialog = new Form
@@ -816,23 +852,24 @@ private void CheckFileTimestamp()
             Size = new Size(300, 300),
             StartPosition = FormStartPosition.CenterParent
         };
+        
 
         FlowLayoutPanel panel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
 
         // Buttons for different apps/websites
         Button btnZoom = new Button { Text = "Zoom", Width = 120 };
-        Button btnTeams = new Button { Text = "Teams", Width = 120 };
+        //Button btnTeams = new Button { Text = "Teams", Width = 120 };
         Button btnVisualizer = new Button { Text = "Visualizer", Width = 120 };
         Button btnCougarApps = new Button { Text = "Cougar Apps", Width = 120 };
 
         // Assign click events with installation checks
         btnZoom.Click += (s, e) => CheckAndOpenApp("Zoom", GetConfigValue("ExpectedZoomPath"), InstallZoom);
-        btnTeams.Click += (s, e) => CheckAndOpenApp("Microsoft Teams", GetConfigValue("ExpectedTeamsPath"), InstallTeams);
+        //btnTeams.Click += (s, e) => CheckAndOpenApp("Microsoft Teams", GetConfigValue("ExpectedTeamsPath"), InstallTeams);
         btnVisualizer.Click += (s, e) => CheckAndOpenApp("Visualizer", GetConfigValue("ExpectedVisualizerPath"), InstallVisualizer);
-        btnCougarApps.Click += (s, e) => OpenWebsite("https://cougarapps.csusm.edu/Citrix/CougarAppsWeb/");
+        btnCougarApps.Click += (s, e) => OpenWebsite("https://cougarapps.csusm.edu/Citrix/CougarAppsProdWeb/");
 
         // Add buttons to panel
-        panel.Controls.AddRange(new Control[] { btnZoom, btnTeams, btnVisualizer, btnCougarApps });
+        panel.Controls.AddRange(new Control[] { btnZoom, btnVisualizer, btnCougarApps });
 
         appDialog.Controls.Add(panel);
         appDialog.ShowDialog();
@@ -845,6 +882,8 @@ private void CheckFileTimestamp()
         Log($"{appName} is installed: ✔");
         Log($"Path: {appPath}");
         OpenApplication(appPath);
+        if (appPath == "https://cougarapps.csusm.edu/Citrix/CougarAppsProdWeb/")
+            CheckCitrix();
     }
     else
     {
@@ -869,8 +908,6 @@ private void OpenApplication(string appPath)
 {
     try
     {
-        if (appPath == "https://cougarapps.csusm.edu/Citrix/CougarAppsWeb/")
-            CheckCitrix();
         System.Diagnostics.Process.Start(appPath);
         updateDoneEvent.Set();
     }
@@ -879,10 +916,14 @@ private void OpenApplication(string appPath)
         MessageBox.Show("Error opening application: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         updateDoneEvent.Set();
     }
+    
 }
+
+public bool citrix_open;
 
 private void OpenWebsite(string url)
 {
+    citrix_open = false;
     try
     {
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
@@ -891,6 +932,8 @@ private void OpenWebsite(string url)
             UseShellExecute = true
         });
         updateDoneEvent.Set();
+        citrix_open = true;
+
     }
     catch (Exception ex)
     {
