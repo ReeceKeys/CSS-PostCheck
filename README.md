@@ -49,18 +49,8 @@ The script performs the following tests:
 - Installation buttons for Visualizer and Teams are not yet complete.
 
 ## Contributing 🤝
-We welcome contributions to improve this script. Please fork the repository and submit a pull request with your changes. Ensure your code adheres to our coding standards and includes appropriate tests.
 
-## Resources 🌱
-
-### C#:
-
-### Writing a ReadMe doc with clean formatting:
-https://www.markdownguide.org/cheat-sheet/
-
-## License 🪪
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+Within the CSS team, we welcome contributions. Contact Reece Harris, Calvary Fisher, or Christopher Bertram for permissions to branch.
 
 ## Contact 📞
 
