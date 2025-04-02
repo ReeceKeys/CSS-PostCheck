@@ -23,7 +23,7 @@ This script performs the following checks and installations:
 2. **Run the Script**: Execute the test script on the target Windows 10/11 machines.
 3. **Verify Results**: Check the output to ensure all tests pass based on the configuration settings.
 
-##Config
+## Config ⚙️
 
 1. If you would like to change paths of files, expected audio devices, etc. - update *config.ini*
 
